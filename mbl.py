@@ -11,6 +11,7 @@ from telepot.namedtuple import InlineKeyboardButton as BT
 from telepot.namedtuple import InlineKeyboardMarkup as MU
 import time
 import atexit
+import requests
 
 class Upbit:
     def __init__(self, access, secret) -> None:
@@ -310,8 +311,10 @@ class Telegram:
         17. /격리 상환 수량 : Isolated에서 수량 만큼 상환함
         18. /대여수량조회 : 바이낸스 Cross/Isolated 대여 수량 및 한도 조회
         19. /매매기준변경 buy sell : 매매 기준점 변경. 기준 프리미엄 숫자 입력
-        20. /매매수량변경 amount : 총 매매 수량 변경 
-        21. /매매테스트 : 자동거래가 잘 이루어 지는지 최소 금액으로 거래 테스트
+        20. /매매수량변경 amount : 총 매매 수량 변경
+        21. /아이피조회 : 현재 서버의 ip를 조회함
+        22. /매매테스트 : 자동거래가 잘 이루어 지는지 최소 금액으로 거래 테스트
+        23. /후원주소조회 : 개발자를 후원할 수 있는 주소를 조회함
         """
     
     def send(self, msg: str):
@@ -326,8 +329,6 @@ class Telegram:
             _message = msg['text']
             if _message[0:1] == '/': # 명령어
                 self.execCmd(_message)
-            else:
-                self.firstMenu()
 
     def execCmd(self, msg: str):
         args = msg.split(' ')
@@ -406,13 +407,13 @@ class Telegram:
         elif command == '/매매수량변경':
             self.amount = float(args[0])
             self.send("매매 수량 변경. 다음부터 업비트에서 {}개를 매매합니다.".format(self.amount))
+        elif command == '/아이피조회':
+            self.send(requests.get("http://ip.jsontest.com").json()['ip'])
         elif command == '/매매테스트':
             self.exSelection2()
-
-    def firstMenu(self):
-        btn1 = BT(text='사고 팔기', callback_data='buy_sell')
-        mu = MU(inline_keyboard = [[btn1]])
-        self.sendBtn("할 일을 선택하세요", mu)
+        elif command == '/후원주소조회':
+            self.send("0x1C42F0F4cFf71173C333CFc09206ab44b40e99fA")
+            self.send("위 주소를 통해 이더리움, bnb, 클레이튼 등 다양한 토큰을 후원할수 있습니다. 여러분의 작은 후원이 개발자에겐 큰 힘이 됩니다.")
 
     def exSelection(self):
         btn1 = BT(text='업비트', callback_data='upbit_balance')
