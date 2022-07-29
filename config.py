@@ -7,6 +7,10 @@ class Upbit:
     access_key = ""
     secret_key = ""
 
+class Bithumb:
+    access_key = ""
+    secret_key = ""
+
 class Binance:
     access_key = ""
     secret_key = ""
