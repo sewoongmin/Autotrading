@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+from tkinter.messagebox import NO
 import config
 import time
 import atexit
@@ -12,6 +13,7 @@ from upbit import Upbit
 from bithumb import Bithumb
 from binance_ex import Binance
 from autotrade import Autotrade
+from utility import Alarm
 
 class Telegram:
     def __init__(self, token, mc) -> None:
@@ -21,8 +23,6 @@ class Telegram:
         self.buy_point = config.buy_point
         self.sell_point = config.sell_point
         self.amount = config.amount
-        self.settings = dict( Auto_trading = True, Cross = True, Isolated = True)
-        self.isolated = True
         self.start_msg = """
         BOT 기본 명령어
         1. /명령어 : 명령어 표시
@@ -30,25 +30,30 @@ class Telegram:
         3. /티커변경 티커 : 기준 티커 변경
         4. /잔고조회 : 업비트 원화, 바이낸스 USDT 잔고 조회
         5. /프리미엄 : 티커의 현재 프리미엄 값을 조회
-        6. /자동거래 시작 : 자동거래를 시작
-        7. /자동거래 종료 : 자동거래를 종료 
-        8. /자동거래 변경 거래소1 거래소2 : 자동거래에 사용되는 거래소 변경, main = 거래소1, sub = 거래소2
-        9. /원클릭매수 : 현재 프리미엄으로 업비트에서 매수, 바이낸스에서 마진 매도
-        10. /원클릭매도 : 현재 프리미엄으로 업비트에서 매도, 바이낸스에서 마진 매수
-        11. /교차 활성화 : 자동거래시 Cross를 사용
-        12. /교차 비활성화 : 자동거래시 Cross를 사용하지 않음
-        13. /교차 대여 수량 : Cross에서 수량 만큼 대여함 
-        14. /교차 상환 수량 : Cross에서 수량 만큼 상환함 
-        15. /격리 활성화 : 자동거래시 Isolated를 사용
-        16. /격리 비활성화 : 자동거래시 Isolated를 사용하지 않음
-        17. /격리 대여 수량 : Isolated에서 수량 만큼 대여함
-        18. /격리 상환 수량 : Isolated에서 수량 만큼 상환함
-        19. /대여수량조회 : 바이낸스 Cross/Isolated 대여 수량 및 한도 조회
-        20. /매매기준변경 buy sell : 매매 기준점 변경. 기준 프리미엄 숫자 입력
-        21. /매매수량변경 amount : 총 매매 수량 변경
-        22. /아이피조회 : 현재 서버의 ip를 조회함
-        23. /매매테스트 : 자동거래가 잘 이루어 지는지 최소 금액으로 거래 테스트
-        24. /후원주소조회 : 개발자를 후원할 수 있는 주소를 조회함
+        6. /알람 조회 : 설정된 알람을 조회
+        7. /알람 설정 상승 bp : 프리미엄이 bp%를 상승 돌파할때 메세지를 주도록 설정
+        8. /알람 설정 하락 bp : 프리미엄이 bp%를 하락 돌파 할때 메세지를 주도록 설정 
+        9. /알람 삭제 상승 bp : 상승 bp 알람을 제거
+        10. /알람 삭제 하락 bp : 하락 bp 알람을 제거 
+        11. /자동거래 시작 : 자동거래를 시작
+        12. /자동거래 종료 : 자동거래를 종료 
+        13. /자동거래 변경 거래소1 거래소2 : 자동거래에 사용되는 거래소 변경, main = 거래소1, sub = 거래소2
+        14. /원클릭매수 : 현재 프리미엄으로 업비트에서 매수, 바이낸스에서 마진 매도
+        15. /원클릭매도 : 현재 프리미엄으로 업비트에서 매도, 바이낸스에서 마진 매수
+        16. /교차 활성화 : 자동거래시 Cross를 사용
+        17. /교차 비활성화 : 자동거래시 Cross를 사용하지 않음
+        18. /교차 대여 수량 : Cross에서 수량 만큼 대여함 
+        19. /교차 상환 수량 : Cross에서 수량 만큼 상환함 
+        20. /격리 활성화 : 자동거래시 Isolated를 사용
+        21. /격리 비활성화 : 자동거래시 Isolated를 사용하지 않음
+        22. /격리 대여 수량 : Isolated에서 수량 만큼 대여함
+        23. /격리 상환 수량 : Isolated에서 수량 만큼 상환함
+        24. /대여수량조회 : 바이낸스 Cross/Isolated 대여 수량 및 한도 조회
+        25. /매매기준변경 buy sell : 매매 기준점 변경. 기준 프리미엄 숫자 입력
+        26. /매매수량변경 amount : 총 매매 수량 변경
+        27. /아이피조회 : 현재 서버의 ip를 조회함
+        28. /매매테스트 : 자동거래가 잘 이루어 지는지 최소 금액으로 거래 테스트
+        29. /후원주소조회 : 개발자를 후원할 수 있는 주소를 조회함
         """
     
     def send(self, msg: str):
@@ -81,26 +86,23 @@ class Telegram:
         elif command == '/프리미엄':
             premium = autotrade.getPremium(self.ticker)
             self.send("현재 {} 프리미엄은 {:.3f}입니다.".format(self.ticker, premium))
+        elif command == "/알람":
+            if args[0] == "조회":
+                self.send(alarm.showAlert())
+            elif args[0] == "설정":
+                self.send(alarm.addAlert(args[1], float(args[2])))
+            elif args[0] == "삭제":
+                self.send(alarm.delAlert(args[1], float(args[2])))
         elif command == '/자동거래':
             if args[0] == '시작':
-                self.settings["Auto_trading"] = True
+                config.settings["Auto_trading"] = True
                 bot.send("자동거래를 시작합니다.")
             elif args[0] == '종료':
-                self.settings["Auto_trading"] = False
+                config.settings["Auto_trading"] = False
                 bot.send("자동거래를 종료합니다.")
             elif args[0] == "변경":
-                if args[1] == "업비트":
-                    autotrade.main = upbit
-                elif args[1] == "빗썸":
-                    autotrade.main = bithumb
-                elif args[1] == "바이낸스":
-                    autotrade.main = binance
-                if args[2] == "업비트":
-                    autotrade.sub = upbit
-                elif args[2] == "빗썸":
-                    autotrade.sub = bithumb
-                elif args[2] == "바이낸스":
-                    autotrade.sub = binance
+                autotrade.main = exchagneSelection(args[1])
+                autotrade.sub = exchagneSelection(args[2])
                 bot.send("메인 거래소를 {}, 서브 거래소를 {}로 변경합니다.".format(args[1], args[2]))
 
         elif command == '/원클릭매수':
@@ -110,20 +112,10 @@ class Telegram:
         elif command == '/교차':
             self.setMargin('Cross', args)
         elif command == '/격리':
-            if args[0] == "활성화":
-                self.isolated = True
-                bot.send("다음부터 자동거래시 Isolated를 사용합니다.")
-            elif args[0] == "비활성화":
-                self.isolated = False
-                bot.send("다음부터 자동거래시 Isolated를 사용하지 않습니다.")
-            elif args[0] == "대여":
-                msg = binance.borrowIsol(self.ticker, float(args[1]))
-                bot.send(msg)
-            elif args[0] == "상환":
-                msg = binance.repayIsol(self.ticker, float(args[1]))
-                bot.send(msg)
+            self.setMargin("Isolated", args)
         elif command == '/대여수량조회':
-            borrowCheck(self.ticker)
+            bot.send(binance.getMaxMarginLoan("Cross", self.ticker))
+            bot.send(binance.getMaxMarginLoan("Isolated", self.ticker))
         elif command == '/매매기준변경':
             self.buy_point = float(args[0])
             self.sell_point = float(args[1])
@@ -145,102 +137,66 @@ class Telegram:
         self.send("현재 설정된 구매시작점 {}%, 매도 시작점 {}%.".format(self.buy_point, self.sell_point))
         self.send("현재 설정된 총 매매수량 {}개.".format(self.amount))
 
-        for key in self.settings:
-            if self.settings[key]:
-                self.send("{} 사용 설정 됨".format(key))
+        for key in config.settings:
+            if config.settings[key]:
+                bot.send("{} 사용 설정 됨".format(key))
             else:
-                self.send("{} 미사용 설정 됨".format(key))
+                bot.send("{} 미사용 설정 됨".format(key))
 
     def setMargin(self, key, args):
         if args[0] == "활성화":
-            self.settings[key] = True
+            config.settings[key] = True
             bot.send("다음부터 자동거래시 {}를 사용합니다.".format(key))
         elif args[0] == "비활성화":
-            self.settings[key] = False
+            config.settings[key] = False
             bot.send("다음부터 자동거래시 {}를 사용하지 않습니다.".format(key))
         elif args[0] == "대여":
-            msg = binance.borrow(self.ticker, float(args[1]))
-            bot.send(msg)
+            bot.send(binance.borrow(key, self.ticker, float(args[1])))
         elif args[0] == "상환":
-            msg = binance.repay(self.ticker, float(args[1]))
-            bot.send(msg)
+            bot.send(binance.repay(key, self.ticker, float(args[1])))
 
     def exSelection(self):
         btn1 = BT(text='업비트', callback_data='upbit_balance')
-        btn2 = BT(text='바이낸스', callback_data='binance_balance')
-        mu = MU(inline_keyboard = [[btn1, btn2]])
+        btn2 = BT(text='빗썸', callback_data='bithumb_balance')
+        btn3 = BT(text='바이낸스', callback_data='binance_balance')
+        mu = MU(inline_keyboard = [[btn1, btn2, btn3]])
         self.sendBtn('거래소를 선택하세요', mu)
 
     def exSelection2(self):
         btn1 = BT(text='업비트', callback_data='upbit_test')
-        btn2 = BT(text='바이낸스 Cross', callback_data='binance_cross_test')
-        btn3 = BT(text='바이낸스 Isolated', callback_data='binance_isolated_test')
-        mu = MU(inline_keyboard = [[btn1, btn2, btn3]])
+        btn2 = BT(text='빗썸', callback_data='bithumb_test')
+        btn3 = BT(text='바이낸스 Cross', callback_data='binance_test_Cross')
+        btn4 = BT(text='바이낸스 Isolated', callback_data='binance_test_Isolated')
+        mu = MU(inline_keyboard = [[btn1, btn2, btn3, btn4]])
         self.sendBtn('테스트할 거래소를 선택하세요', mu)
 
-    def upbitTest(self):
-        btn1 = BT(text='사기', callback_data='upbit_buy')
-        btn2 = BT(text='팔기', callback_data='upbit_sell')
+    def testBuySell(self, exchange):
+        btn1 = BT(text='사기', callback_data='{}_buy'.format(exchange))
+        btn2 = BT(text='팔기', callback_data='{}_sell'.format(exchange))
         mu = MU(inline_keyboard = [[btn1, btn2]])
-        self.sendBtn('테스트할 거래를 선택하세요. 거래는 업비트에서 {}를 6천원 가량 사거나 팝니다'.format(self.ticker), mu)
+        self.sendBtn('테스트할 거래를 선택하세요. 거래는 {}에서 {}를 6천원 가량 사거나 팝니다'.format(exchange, self.ticker), mu)
 
-    def binanceCrossTest(self):
-        btn1 = BT(text='빌리기', callback_data='binance_borrow_cross')
-        btn2 = BT(text='사기', callback_data='binance_buy_cross')
-        btn3 = BT(text='팔기', callback_data='binance_sell_cross')
+    def binanceTest(self, key: str):
+        btn1 = BT(text='빌리기', callback_data='binance_borrow_{}'.format(key))
+        btn2 = BT(text='사기', callback_data='binance_buy_{}'.format(key))
+        btn3 = BT(text='팔기', callback_data='binance_sell_{}'.format(key))
         mu = MU(inline_keyboard = [[btn1, btn2, btn3]])
-        self.sendBtn('테스트할 거래를 선택하세요. 거래는 바이낸스 Cross에서 {}를 20달러 가량 빌리거나 사거나 팝니다'.format(self.ticker), mu)
-
-    def binanceIsolTest(self):
-        btn1 = BT(text='빌리기', callback_data='binance_borrow_isol')
-        btn2 = BT(text='사기', callback_data='binance_buy_isol')
-        btn3 = BT(text='팔기', callback_data='binance_sell_isol')
-        mu = MU(inline_keyboard = [[btn1, btn2, btn3]])
-        self.sendBtn('테스트할 거래를 선택하세요. 거래는 바이낸스 Isolated에서 {}를 20달러 가량 빌리거나 사거나 팝니다'.format(self.ticker), mu)
+        self.sendBtn('테스트할 거래를 선택하세요. 거래는 바이낸스 {}에서 {}를 20달러 가량 빌리거나 사거나 팝니다'.format(key, self.ticker), mu)
 
 upbit = Upbit(config.Upbit.access_key, config.Upbit.secret_key)
 bithumb = Bithumb(config.Bithumb.access_key, config.Bithumb.secret_key)
 binance = Binance(config.Binance.access_key,config.Binance.secret_key)
-autotrade = Autotrade(upbit, binance)
+autotrade = Autotrade(upbit, bithumb)
+alarm = Alarm()
 bot = Telegram(config.Telegram.token, config.Telegram.mc)
 
-def getPremium(ticker: str = 'BTC'):
-    btc_krw = upbit.getPrice('BTC')
-    btc_usdt = binance.getPrice('BTC')
-    krw_price = upbit.getPrice(ticker)
-    usdt_price = binance.getPrice(ticker)
-    if str(type(usdt_price)) == "<class 'float'>" and krw_price != 0:
-        ref_er = btc_krw/btc_usdt
-        tar_er = krw_price/usdt_price
-        return tar_er/ref_er
-    else:
-        return -1
-
-def borrowCheck(ticker):
-    cross_msg = binance.getMaxMarginLoan(ticker)
-    isol_msg = binance.getMaxMarginLoanIsol(ticker)
-    bot.send(cross_msg)
-    bot.send(isol_msg)
-
-def autoBuy():
-    upbit_msg = upbit.buyMarket(bot.ticker, bot.amount)
-    binance_cross_msg = ""
-    binance_isolated_msg = ""
-    if bot.cross:
-        binance_cross_msg = binance.marginSell(bot.ticker, binance.getMarginBalance(bot.ticker))
-    if bot.isolated:
-        binance_isolated_msg = binance.marginSellIsol(bot.ticker, binance.getMarginBalanceIsol(bot.ticker))
-    bot.send("매수 완료. {} {} {}".format(upbit_msg, binance_cross_msg, binance_isolated_msg))
-
-def autoSell():
-    upbit_msg = upbit.sellMarket(bot.ticker, upbit.getBalance(bot.ticker))
-    binance_cross_msg = ""
-    binance_isolated_msg = ""
-    if bot.cross:
-        binance_cross_msg = binance.marginBuy(bot.ticker, -binance.getMarginBalance(bot.ticker, 'netAsset'))
-    if bot.isolated:
-        binance_isolated_msg = binance.marginBuyIsol(bot.ticker, -binance.getMarginBalanceIsol(bot.ticker, 'netAsset'))
-    bot.send("매도 완료. {} {} {}".format(upbit_msg, binance_cross_msg, binance_isolated_msg))
+def exchagneSelection(name: str):
+    if name == "업비트":
+        return upbit
+    elif name == "빗썸":
+        return bithumb
+    elif name == "바이낸스":
+        return binance
 
 def handle_exit():
     bot.send("자동거래 서버 종료!")
@@ -249,61 +205,46 @@ atexit.register(handle_exit)
 
 def query_ans(msg):
     query_data = msg["data"]
-    if query_data == 'upbit_balance':
-        balance = upbit.getBalance('KRW')
-        bot.send("업비트 잔고 {:.0f}원 입니다.".format(balance))
-    elif query_data == 'binance_balance':
-        balance = binance.getMarginBalance('USDT')
-        balance_isol = binance.getMarginBalanceIsol('USDT')
-        bot.send("바이낸스 Cross 잔고 {:.2f}USDT 입니다.".format(balance))
-        bot.send("바이낸스 Isolated 잔고 {:.2f}USDT 입니다.".format(balance_isol))
-    elif query_data == 'upbit_test':
-        bot.upbitTest()
-    elif query_data == 'binance_cross_test':
-        bot.binanceCrossTest()
-    elif query_data == 'binance_isolated_test':
-        bot.binanceIsolTest()
-    elif query_data == 'upbit_buy':
-        price = upbit.getPrice(bot.ticker)
-        if price == 0:
-            bot.send("업비트에서 {}의 가격을 불러올 수 없습니다.".format(bot.ticker))
-        else:
-            msg = upbit.buyMarket(bot.ticker, 6000/price)
-            bot.send(msg)
-    elif query_data == 'upbit_sell':
-        balance = upbit.getBalance(bot.ticker)
-        msg = upbit.sellMarket(bot.ticker, balance)
-        bot.send(msg)
-    elif query_data == 'binance_borrow_cross':
-        price = binance.getPrice(bot.ticker)
-        if str(type(price)) == "<class 'float'>":
-            msg = binance.borrow(bot.ticker, 20/price)
-            bot.send(msg)
-        else:
-            bot.send("바이낸스에서 {}의 가격을 불러올 수 없습니다.".format(bot.ticker))
-    elif query_data == 'binance_buy_cross':
-        balance = -binance.getMarginBalance(bot.ticker, 'netAsset')
-        msg = binance.marginBuy(bot.ticker, balance)
-        bot.send(msg)
-    elif query_data == 'binance_sell_cross':
-        balance = binance.getMarginBalance(bot.ticker)
-        msg = binance.marginSell(bot.ticker, balance)
-        bot.send(msg)
-    elif query_data == 'binance_borrow_isol':
-        price = binance.getPrice(bot.ticker)
-        if str(type(price)) == "<class 'float'>":
-            msg = binance.borrowIsol(bot.ticker, 20/price)
-            bot.send(msg)
-        else:
-            bot.send("바이낸스에서 {}의 가격을 불러올 수 없습니다.".format(bot.ticker))
-    elif query_data == 'binance_buy_isol':
-        balance = -binance.getMarginBalanceIsol(bot.ticker, 'netAsset')
-        msg = binance.marginBuyIsol(bot.ticker, balance)
-        bot.send(msg)
-    elif query_data == 'binance_sell_isol':
-        balance = binance.getMarginBalanceIsol(bot.ticker)
-        msg = binance.marginSellIsol(bot.ticker, balance)
-        bot.send(msg)
+    args = query_data.split('_')
+    keys = ["Cross", "Isolated"]
+    if args[0] == "upbit":
+        if args[1] == "balance":
+            bot.send("업비트 잔고 {:.0f}원 입니다.".format(upbit.getBalance('KRW')))
+        elif args[1] == "test":
+            bot.testBuySell(args[0])
+        elif args[1] == "buy":
+            price = upbit.getPrice(bot.ticker)
+            if price == 0:
+                bot.send("업비트에서 {}의 가격을 불러올 수 없습니다.".format(bot.ticker))
+            else:
+                bot.send(upbit.buyMarket(bot.ticker, 6000/price))
+        elif args[1] == "sell":
+            bot.send(upbit.sellMarket(bot.ticker, upbit.getBalance(bot.ticker)))
+    elif args[0] == "bithumb":
+        if args[1] == "balance":
+            bot.send("빗썸 잔고 {:.0f}원 입니다.".format(bithumb.getBalance('KRW')))
+        elif args[1] == "test":
+            bot.testBuySell(args[0])
+        elif args[1] == "buy":
+            price = bithumb.getPrice(bot.ticker)
+            if isinstance(price, float):
+                bot.send(bithumb.buyMarket(bot.ticker, 6000/price))
+            else:
+                bot.send("빗썸에서 {}의 가격을 불러올 수 없습니다.".format(bot.ticker))
+        elif args[1] == "sell":
+            bot.send(bithumb.sellMarket(bot.ticker, bithumb.getBalance(bot.ticker)))
+    elif args[0] == "binance":
+        if args[1] == "balance":
+            for key in keys:
+                bot.send("바이낸스 {} 잔고 {:.2f}USDT 입니다.".format(key, binance.getMarginBalance(key, 'USDT')))
+        elif args[1] == "test":
+            bot.binanceTest(args[2]) 
+        elif args[1] == "borrow":
+            bot.send(binance.testBorrow(args[2], bot.ticker))
+        elif args[1] == "buy":
+            bot.send(binance.testMarginBuy(args[2], bot.ticker))    
+        elif args[1] == "sell":
+            bot.send(binance.testMarginSell(args[2], bot.ticker))
 
 if __name__ == '__main__':
     bot.send("자동거래 봇 시작!")
@@ -313,17 +254,18 @@ if __name__ == '__main__':
     while(True):
         buy_point = 1 + bot.buy_point/100
         sell_point = 1 + bot.sell_point/100
-        premium = getPremium(bot.ticker)
+        premium = autotrade.getPremium(bot.ticker)
+        alert = alarm.checkAlert(premium)
+        if alert is not None:
+            bot.send(alert)
         now = time.time()
-        if bot.settings["Auto_trading"]:
+        if config.settings["Auto_trading"]:
             if premium > 0 and premium < buy_point and upbit.getBalance(bot.ticker) < bot.amount*0.8:
                 bot.send("{} 프리미엄 {:.3f} 도달. {:.3f}에서 매수 시작.".format(bot.ticker, bot.buy_point, premium))
-                msg = autotrade.autoBuy(bot.ticker, bot.amount)
-                bot.send(msg)
+                bot.send(autotrade.autoBuy(bot.ticker, bot.amount))
             
             elif premium > sell_point and upbit.getBalance(bot.ticker) > bot.amount*0.8 :
                 bot.send("{} 프리미엄 {:.3f} 도달. {:.3f}에서 매도 시작.".format(bot.ticker, bot.sell_point, premium))
-                msg = autotrade.autoSell(bot.ticker, bot.amount)
-                bot.send(msg)
+                bot.send(msg = autotrade.autoSell(bot.ticker, bot.amount))
 
         time.sleep(1)
