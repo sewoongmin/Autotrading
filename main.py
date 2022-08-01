@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 
-from tkinter.messagebox import NO
 import config
 import time
 import atexit
@@ -14,6 +13,7 @@ from bithumb import Bithumb
 from binance_ex import Binance
 from autotrade import Autotrade
 from utility import Alarm
+from utility import BorrowChecker
 
 class Telegram:
     def __init__(self, token, mc) -> None:
@@ -49,11 +49,16 @@ class Telegram:
         22. /격리 대여 수량 : Isolated에서 수량 만큼 대여함
         23. /격리 상환 수량 : Isolated에서 수량 만큼 상환함
         24. /대여수량조회 : 바이낸스 Cross/Isolated 대여 수량 및 한도 조회
-        25. /매매기준변경 buy sell : 매매 기준점 변경. 기준 프리미엄 숫자 입력
-        26. /매매수량변경 amount : 총 매매 수량 변경
-        27. /아이피조회 : 현재 서버의 ip를 조회함
-        28. /매매테스트 : 자동거래가 잘 이루어 지는지 최소 금액으로 거래 테스트
-        29. /후원주소조회 : 개발자를 후원할 수 있는 주소를 조회함
+        25. /대여목록 조회 : 설정된 대여목록을 조회
+        26. /대여목록 추가 교차 티커 : 교차 대여목록에 티커를 추가함
+        27. /대여목록 추가 격리 티커 : 격리 대여목록에 티커를 추가함
+        28. /대여목록 삭제 교차 티커 : 교차 대여목록에서 티커를 삭제함
+        29. /대여목록 삭제 격리 티커 : 격리 대여목록에서 티커를 삭제함
+        30. /매매기준변경 buy sell : 매매 기준점 변경. 기준 프리미엄 숫자 입력
+        31. /매매수량변경 amount : 총 매매 수량 변경
+        32. /아이피조회 : 현재 서버의 ip를 조회함
+        33. /매매테스트 : 자동거래가 잘 이루어 지는지 최소 금액으로 거래 테스트
+        34. /후원주소조회 : 개발자를 후원할 수 있는 주소를 조회함
         """
     
     def send(self, msg: str):
@@ -116,6 +121,17 @@ class Telegram:
         elif command == '/대여수량조회':
             bot.send(binance.getMaxMarginLoan("Cross", self.ticker))
             bot.send(binance.getMaxMarginLoan("Isolated", self.ticker))
+        elif command == "/대여목록":
+            if args[0] == "조회":
+                self.send(borrow_checker.showAlert())
+            elif args[0] == "추가" and args[1] == "교차":
+                self.send(borrow_checker.addAlert("Cross", args[2]))
+            elif args[0] == "추가" and args[1] == "격리":
+                self.send(borrow_checker.addAlert("Isolated", args[2]))
+            elif args[0] == "삭제" and args[1] == "교차":
+                self.send(borrow_checker.delAlert("Cross", args[2]))
+            elif args[0] == "삭제" and args[1] == "격리":
+                self.send(borrow_checker.delAlert("Isolated", args[2]))
         elif command == '/매매기준변경':
             self.buy_point = float(args[0])
             self.sell_point = float(args[1])
@@ -188,6 +204,7 @@ bithumb = Bithumb(config.Bithumb.access_key, config.Bithumb.secret_key)
 binance = Binance(config.Binance.access_key,config.Binance.secret_key)
 autotrade = Autotrade(upbit, bithumb)
 alarm = Alarm()
+borrow_checker = BorrowChecker(binance)
 bot = Telegram(config.Telegram.token, config.Telegram.mc)
 
 def exchagneSelection(name: str):
@@ -258,6 +275,9 @@ if __name__ == '__main__':
         alert = alarm.checkAlert(premium)
         if alert is not None:
             bot.send(alert)
+        borrow_alert = borrow_checker.checkAlert()
+        if borrow_alert != "":
+            bot.send(borrow_alert)
         now = time.time()
         if config.settings["Auto_trading"]:
             if premium > 0 and premium < buy_point and upbit.getBalance(bot.ticker) < bot.amount*0.8:

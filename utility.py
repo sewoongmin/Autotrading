@@ -1,8 +1,6 @@
 #! /usr/bin/env python3
 
-from pickletools import read_string1
 import time
-from tkinter import N
 import config
 
 class TradeTimer:
@@ -88,3 +86,64 @@ class Alarm:
                 self.pre_bp = cur_bp
                 return "프리미엄 {}% 하락 돌파! 현재 {:.2f}%".format(down, cur_bp)
         self.pre_bp = cur_bp
+
+class BorrowChecker:
+    def __init__(self, exchange) -> None:
+        self.crosses = []
+        self.isolateds = []
+        self._exchange = exchange
+    
+    @property
+    def exchange(self):
+        return self._exchange
+    
+    @exchange.setter
+    def exchange(self, exchange):
+        self._exchange = exchange
+    
+    def addAlert(self, key: str, ticker: str):
+        if key == "Cross":
+            self.crosses.append(ticker)
+        elif key == "Isolated":
+            self.isolateds.append(ticker)
+        return "{}에서 대여 조회목록에 {} 추가완료.".format(key, ticker)
+
+    def delAlert(self, key: str, ticker: str):
+        if key == "Cross":
+            try:
+                self.crosses.remove(ticker)
+            except Exception as e:
+                return "{}의 대여 조회 목록에 {}가 없습니다.".format(key, ticker)    
+        elif key == "Isolated":
+            try:
+                self.isolateds.remove(ticker)
+            except Exception as e:
+                return "{}의 대여 조회 목록에 {}가 없습니다.".format(key, ticker)               
+        return "{}에서 {} 제거완료.".format(key, ticker)
+
+    def showAlert(self) -> str:
+        crosses = "교차 대여조회 목록 : "
+        for cross in self.crosses:
+            crosses += "{} ".format(cross)
+        isolateds = "격리 대여조회 목록 : "
+        for isol in self.isolateds:
+            isolateds += "{} ".format(isol)
+        return "{}. {}".format(crosses, isolateds)
+
+    def checkAlert(self):
+        ret = ""
+        for cross in self.crosses:
+            res = self._exchange.getMaxMarginLoan("Cross", cross)
+            args = res.split(' ')
+            if args[0] == "Cross":
+                ret += res
+                ret += "대여가 가능하여 {} 대여목록에서 {}를 삭제합니다.".format(args[0], cross)
+                self.delAlert(args[0], cross)
+        for isol in self.isolateds:
+            res = self._exchange.getMaxMarginLoan("Isolated", isol)
+            args = res.split(' ')
+            if args[0] == "Isolated":
+                ret += res
+                ret += "대여가 가능하여 {} 대여목록에서 {}를 삭제합니다.".format(args[0], isol)
+                self.delAlert(args[0], isol)
+        return ret
