@@ -1,2 +1,4 @@
 *.pyc
 config.py
+telegram_multi_send.py
+upbit_buyer.py

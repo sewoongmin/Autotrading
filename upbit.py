@@ -1,11 +1,68 @@
 #! /usr/bin/env python3
 
 import pyupbit
+import config
+import time
 
 class Upbit:
     def __init__(self, access, secret) -> None:
         self.upbit = pyupbit.Upbit(access, secret)
         self.name = "업비트"
+        self.tickers = pyupbit.get_tickers(fiat="KRW")
+        self.tickers.remove('KRW-BTC')
+        self.tickers.remove('KRW-ETH')
+        self.tickers.remove('KRW-XRP')
+        self.tickers.remove('KRW-ADA')
+        self.tickers.remove('KRW-SOL')
+        self.tickers.remove('KRW-DOGE')
+        self.tickers.remove('KRW-DOT')
+        self.tickers.remove('KRW-MATIC')
+        self.tickers.remove('KRW-AVAX')
+        self.tickers.remove('KRW-TRX')
+        self.tickers.remove('KRW-ETC')
+        self.tickers.remove('KRW-LINK')
+        self.tickers.remove('KRW-CRO')
+        self.tickers.remove('KRW-NEAR')
+        self.tickers.remove('KRW-XLM')
+        self.tickers.remove('KRW-ATOM')
+        self.tickers.remove('KRW-BCH')
+        self.tickers.remove('KRW-ALGO')
+        self.tickers.remove('KRW-FLOW')
+        self.tickers.remove('KRW-VET')
+        self.tickers.remove('KRW-MANA')
+        self.tickers.remove('KRW-SAND')
+        self.tickers.remove('KRW-XTZ')
+        self.tickers.remove('KRW-HBAR')
+        self.tickers.remove('KRW-AXS')
+        self.tickers.remove('KRW-THETA')
+        self.tickers.remove('KRW-AAVE')
+        self.tickers.remove('KRW-EOS')
+        self.tickers.remove('KRW-BSV')
+        self.tickers.remove('KRW-BTT')
+        self.tickers.remove('KRW-IOTA')
+        self.tickers.remove('KRW-XEC')
+        self.tickers.remove('KRW-NEO')
+        self.tickers.remove('KRW-CHZ')
+        self.tickers.remove('KRW-WAVES')
+        self.tickers.remove('KRW-BAT')
+        self.tickers.remove('KRW-STX')
+        self.tickers.remove('KRW-GMT')
+        self.tickers.remove('KRW-ZIL')
+        self.tickers.remove('KRW-ENJ')
+
+    def volumeChecker(self):
+        ret = []
+        for ticker in self.tickers:
+            df = pyupbit.get_ohlcv(ticker, interval="minute15", count=11)
+            time.sleep(0.04)
+            if df is not None:
+                result = 0
+                for volume in df['volume']:
+                    result += volume
+                result = (result - df['volume'][-1])/10
+                if df['volume'][-1] > result*15 and df['close'][-1] > df['close'][-2]:
+                    ret.append(ticker)
+        return ret
 
     def getPrice(self, ticker: str = 'BTC') -> float:
         upbit_ticker = 'KRW-{}'.format(ticker) 
