@@ -2,3 +2,6 @@
 config.py
 telegram_multi_send.py
 upbit_buyer.py
+nohup.out
+subscriber.py
+ticker.py

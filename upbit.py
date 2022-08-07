@@ -1,68 +1,82 @@
 #! /usr/bin/env python3
 
+from matplotlib.axis import Tick
 import pyupbit
 import config
 import time
+from ticker import Ticker, Volume
 
 class Upbit:
     def __init__(self, access, secret) -> None:
         self.upbit = pyupbit.Upbit(access, secret)
         self.name = "업비트"
         self.tickers = pyupbit.get_tickers(fiat="KRW")
-        self.tickers.remove('KRW-BTC')
-        self.tickers.remove('KRW-ETH')
-        self.tickers.remove('KRW-XRP')
-        self.tickers.remove('KRW-ADA')
-        self.tickers.remove('KRW-SOL')
-        self.tickers.remove('KRW-DOGE')
-        self.tickers.remove('KRW-DOT')
-        self.tickers.remove('KRW-MATIC')
-        self.tickers.remove('KRW-AVAX')
-        self.tickers.remove('KRW-TRX')
-        self.tickers.remove('KRW-ETC')
-        self.tickers.remove('KRW-LINK')
-        self.tickers.remove('KRW-CRO')
-        self.tickers.remove('KRW-NEAR')
-        self.tickers.remove('KRW-XLM')
-        self.tickers.remove('KRW-ATOM')
-        self.tickers.remove('KRW-BCH')
-        self.tickers.remove('KRW-ALGO')
-        self.tickers.remove('KRW-FLOW')
-        self.tickers.remove('KRW-VET')
-        self.tickers.remove('KRW-MANA')
-        self.tickers.remove('KRW-SAND')
-        self.tickers.remove('KRW-XTZ')
-        self.tickers.remove('KRW-HBAR')
-        self.tickers.remove('KRW-AXS')
-        self.tickers.remove('KRW-THETA')
-        self.tickers.remove('KRW-AAVE')
-        self.tickers.remove('KRW-EOS')
-        self.tickers.remove('KRW-BSV')
-        self.tickers.remove('KRW-BTT')
-        self.tickers.remove('KRW-IOTA')
-        self.tickers.remove('KRW-XEC')
-        self.tickers.remove('KRW-NEO')
-        self.tickers.remove('KRW-CHZ')
-        self.tickers.remove('KRW-WAVES')
-        self.tickers.remove('KRW-BAT')
-        self.tickers.remove('KRW-STX')
-        self.tickers.remove('KRW-GMT')
-        self.tickers.remove('KRW-ZIL')
-        self.tickers.remove('KRW-ENJ')
+        # self.tickers.remove('KRW-BTC')
+        # self.tickers.remove('KRW-ETH')
+        # self.tickers.remove('KRW-XRP')
+        # self.tickers.remove('KRW-ADA')
+        # self.tickers.remove('KRW-SOL')
+        # self.tickers.remove('KRW-DOGE')
+        # self.tickers.remove('KRW-DOT')
+        # self.tickers.remove('KRW-MATIC')
+        # self.tickers.remove('KRW-AVAX')
+        # self.tickers.remove('KRW-TRX')
+        # self.tickers.remove('KRW-ETC')
+        # self.tickers.remove('KRW-LINK')
+        # self.tickers.remove('KRW-CRO')
+        # self.tickers.remove('KRW-NEAR')
+        # self.tickers.remove('KRW-XLM')
+        # self.tickers.remove('KRW-ATOM')
+        # self.tickers.remove('KRW-BCH')
+        # self.tickers.remove('KRW-ALGO')
+        # self.tickers.remove('KRW-FLOW')
+        # self.tickers.remove('KRW-VET')
+        # self.tickers.remove('KRW-MANA')
+        # self.tickers.remove('KRW-SAND')
+        # self.tickers.remove('KRW-XTZ')
+        # self.tickers.remove('KRW-HBAR')
+        # self.tickers.remove('KRW-AXS')
+        # self.tickers.remove('KRW-THETA')
+        # self.tickers.remove('KRW-AAVE')
+        # self.tickers.remove('KRW-EOS')
+        # self.tickers.remove('KRW-BSV')
+        # self.tickers.remove('KRW-BTT')
+        # self.tickers.remove('KRW-IOTA')
+        # self.tickers.remove('KRW-XEC')
+        # self.tickers.remove('KRW-NEO')
+        # self.tickers.remove('KRW-CHZ')
+        # self.tickers.remove('KRW-WAVES')
+        # self.tickers.remove('KRW-BAT')
+        # self.tickers.remove('KRW-STX')
+        # self.tickers.remove('KRW-GMT')
+        # self.tickers.remove('KRW-ZIL')
+        # self.tickers.remove('KRW-ENJ')
+        self.ticker_volumes = []
+        for ticker in self.tickers:
+            self.ticker_volumes.append(Ticker(ticker))
 
     def volumeChecker(self):
-        ret = []
-        for ticker in self.tickers:
-            df = pyupbit.get_ohlcv(ticker, interval="minute15", count=11)
+        for ticker in self.ticker_volumes:
+            df = pyupbit.get_ohlcv(ticker.name, interval="minute15", count=11)
             time.sleep(0.04)
             if df is not None:
-                result = 0
-                for volume in df['volume']:
-                    result += volume
-                result = (result - df['volume'][-1])/10
-                if df['volume'][-1] > result*15 and df['close'][-1] > df['close'][-2]:
-                    ret.append(ticker)
+                aver = (sum(df['volume']) - df['volume'][-1])/(len(df['volume']-1))
+                ticker.setVolume(15, df['close'][-2], df['close'][-1], df['volume'][-1], df['volume'][-1]/aver)
+        ret = list(filter(lambda x: x.checkVolume(15), self.ticker_volumes))
+        ret = self.volumeTracker(30, ret)
+        ret = self.volumeTracker(60, ret)
+        ret = self.volumeTracker(240, ret)
         return ret
+
+    def volumeTracker(self, minute, check_list):
+        for ticker in check_list:
+            df = pyupbit.get_ohlcv(ticker.name, interval="minute{}".format(minute), count=11)
+            time.sleep(0.04)
+            if df is not None:
+                aver = (sum(df['volume']) - df['volume'][-1])/(len(df['volume']-1))
+                ticker.setVolume(minute, df['close'][-2], df['close'][-1], df['volume'][-1], df['volume'][-1]/aver)
+        return check_list
+        
 
     def getPrice(self, ticker: str = 'BTC') -> float:
         upbit_ticker = 'KRW-{}'.format(ticker) 
@@ -124,4 +138,4 @@ class Upbit:
         return self.buyMarket(ticker, amount)
 
     def autoSell(self, ticker: str, amount: float) -> str:
-        return self.sellMarket(ticker, amount)
+        return self.sellMarket(ticker, self.getBalance(ticker))

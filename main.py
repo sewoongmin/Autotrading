@@ -38,6 +38,8 @@ class Telegram:
         11. /자동거래 시작 : 자동거래를 시작
         12. /자동거래 종료 : 자동거래를 종료 
         13. /자동거래 변경 거래소1 거래소2 : 자동거래에 사용되는 거래소 변경, main = 거래소1, sub = 거래소2
+        14. /자동거래 야수모드 시작 : 야수모드로 자동거래를 합니다. 업비트에서만 노헷징으로 매수/매도합니다.
+        15. /자동거래 야수모드 종료 : 야수모드를 종료하고 서브 거래소에서 헷징을 합니다. 
         14. /원클릭매수 : 현재 프리미엄으로 업비트에서 매수, 바이낸스에서 마진 매도
         15. /원클릭매도 : 현재 프리미엄으로 업비트에서 매도, 바이낸스에서 마진 매수
         16. /교차 활성화 : 자동거래시 Cross를 사용
@@ -109,6 +111,13 @@ class Telegram:
                 autotrade.main = exchagneSelection(args[1])
                 autotrade.sub = exchagneSelection(args[2])
                 self.send("메인 거래소를 {}, 서브 거래소를 {}로 변경합니다.".format(args[1], args[2]))
+            elif args[0] == '야수모드':
+                if args[1] == '시작':
+                    autotrade.setBeast(True)
+                    self.send('야수모드를 활성화 합니다.')
+                elif args[1] == '종료':
+                    autotrade.setBeast(False)
+                    self.send('야수모드를 비활성화 합니다.')
 
         elif command == '/원클릭매수':
             autotrade.autoBuy(self.ticker, self.amount)
@@ -245,7 +254,7 @@ class Telegram:
 upbit = Upbit(config.Upbit.access_key, config.Upbit.secret_key)
 bithumb = Bithumb(config.Bithumb.access_key, config.Bithumb.secret_key)
 binance = Binance(config.Binance.access_key,config.Binance.secret_key)
-autotrade = Autotrade(upbit, bithumb)
+autotrade = Autotrade(upbit, binance)
 alarm = Alarm()
 borrow_checker = BorrowChecker(binance)
 bot = Telegram(config.Telegram.token, config.Telegram.mc)

@@ -9,16 +9,26 @@ class Autotrade:
     def __init__(self, main, sub) -> None:
         self._main = main
         self._sub = sub
+        self.beast = False
 
     def autoBuy(self, ticker: str, amount: float) -> str:
         main_msg = self._main.autoBuy(ticker, amount)
-        sub_msg = self._sub.autoSell(ticker, amount)
-        return "매수 완료. {} {}".format(main_msg, sub_msg)
+        if self.beast:
+            return "매수 완료. {}".format(main_msg)
+        else:
+            sub_msg = self._sub.autoSell(ticker, amount)
+            return "매수 완료. {} {}".format(main_msg, sub_msg)
 
     def autoSell(self, ticker: str, amount: float) -> str:
         main_msg = self._main.autoSell(ticker, amount)
-        sub_msg = self._sub.autoSell(ticker, amount)
-        return "매도 완료. {} {}".format(main_msg, sub_msg)
+        if self.beast:
+            return "매도 완료. {}".format(main_msg)
+        else:
+            sub_msg = self._sub.autoBuy(ticker, amount)
+            return "매도 완료. {} {}".format(main_msg, sub_msg)
+    
+    def setBeast(self, beast: bool):
+        self.beast = beast
 
     def getPremium(self, ticker: str = 'BTC') -> float:
         if isinstance(self._main, (Upbit, Bithumb)) and isinstance(self._sub, (Upbit, Bithumb)):

@@ -31,6 +31,9 @@ class Binance:
         except Exception as e:
             return e
 
+    def getFuturesBalance(self, ticker: str = 'BTCUSDT') -> float:
+        print(self.binance.futures_account_balance())
+
     def getMarginBalance(self, key: str, ticker: str, type: str = 'free') -> float:
         if key == "Cross":
             balance = self.binance.get_margin_account()
@@ -173,10 +176,12 @@ class Binance:
         return self.marginSell(key, ticker, self.getMarginBalance(key, ticker))
     
     def autoBuy(self, ticker: str, amount: float) -> str:
-        return "{} {}".format(self.marginBuy("Cross", ticker, amount), self.marginBuy("Isolated", ticker, amount))
+        c_balance = -self.getMarginBalance("Cross", ticker, 'netAsset')
+        i_balance = -self.getMarginBalance("Isolated", ticker, 'netAsset')
+        return "{} {}".format(self.marginBuy("Cross", ticker, c_balance), self.marginBuy("Isolated", ticker, i_balance))
 
     def autoSell(self, ticker: str, amount: float) -> str:
-        return "{} {}".format(self.marginSell("Cross", ticker, amount), self.marginSell("Isolated", ticker, amount))
+        return "{} {}".format(self.marginSell("Cross", ticker, self.getMarginBalance("Cross", ticker)), self.marginSell("Isolated", ticker, self.getMarginBalance("Isolated", ticker)))
                 
 
 class State(ABC):
